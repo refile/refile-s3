@@ -8,8 +8,6 @@ module Refile
   #
   # @example
   #   backend = Refile::Backend::S3.new(
-  #     access_key_id: "xyz",
-  #     secret_access_key: "abcd1234",
   #     region: "sa-east-1",
   #     bucket: "my-bucket",
   #     prefix: "files"
@@ -19,12 +17,10 @@ module Refile
   class S3
     extend Refile::BackendMacros
 
-    attr_reader :access_key_id, :max_size
+    attr_reader :max_size
 
     # Sets up an S3 backend with the given credentials.
     #
-    # @param [String] access_key_id
-    # @param [String] secret_access_key
     # @param [String] region            The AWS region to connect to
     # @param [String] bucket            The name of the bucket where files will be stored
     # @param [String] prefix            A prefix to add to all files. Prefixes on S3 are kind of like folders.
@@ -33,10 +29,8 @@ module Refile
     # @param [Hash] s3_options          Additional options to initialize S3 with
     # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/Core/Configuration.html
     # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/S3.html
-    def initialize(access_key_id:, secret_access_key:, region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
-      @access_key_id = access_key_id
-      @secret_access_key = secret_access_key
-      @s3_options = { access_key_id: access_key_id, secret_access_key: secret_access_key, region: region }.merge s3_options
+    def initialize(region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
+      @s3_options = { region: region }.merge s3_options
       @s3 = Aws::S3::Resource.new @s3_options
       @bucket_name = bucket
       @bucket = @s3.bucket @bucket_name
@@ -52,7 +46,7 @@ module Refile
     verify_uploadable def upload(uploadable)
       id = @hasher.hash(uploadable)
 
-      if uploadable.is_a?(Refile::File) and uploadable.backend.is_a?(S3) and uploadable.backend.access_key_id == access_key_id
+      if uploadable.is_a?(Refile::File) and uploadable.backend.is_a?(S3)
         object(id).copy_from(copy_source: [@bucket_name, uploadable.backend.object(uploadable.id).key].join("/"))
       else
         object(id).put(body: uploadable, content_length: uploadable.size)
