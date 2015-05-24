@@ -36,6 +36,8 @@ module Refile
     def initialize(access_key_id:, secret_access_key:, region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
       @access_key_id = access_key_id
       @secret_access_key = secret_access_key
+      @s3_presigned_post_options = s3_options.delete(:s3_presigned_post_options) { {} }
+      @s3_object_operation_options = s3_options.delete(:s3_object_operation_options) { {} }
       @s3_options = { access_key_id: access_key_id, secret_access_key: secret_access_key, region: region }.merge s3_options
       @s3 = Aws::S3::Resource.new @s3_options
       @bucket_name = bucket
@@ -52,11 +54,13 @@ module Refile
     verify_uploadable def upload(uploadable)
       id = @hasher.hash(uploadable)
 
-      if uploadable.is_a?(Refile::File) and uploadable.backend.is_a?(S3) and uploadable.backend.access_key_id == access_key_id
-        object(id).copy_from(copy_source: [@bucket_name, uploadable.backend.object(uploadable.id).key].join("/"))
+      operation, options = if upload_via_copy_operation?(uploadable)
+        [:copy_from, { copy_source: [@bucket_name, uploadable.backend.object(uploadable.id).key].join("/") }]
       else
-        object(id).put(body: uploadable, content_length: uploadable.size)
+        [:put, { body: uploadable, content_length: uploadable.size }]
       end
+
+      object(id).send(operation, s3_object_operation_options(options))
 
       Refile::File.new(self, id)
     end
@@ -137,9 +141,21 @@ module Refile
     # @return [Refile::Signature]
     def presign
       id = RandomHasher.new.hash
-      signature = @bucket.presigned_post(key: [*@prefix, id].join("/"))
+      signature = @bucket.presigned_post(s3_presigned_post_options(key: [*@prefix, id].join("/")))
       signature.content_length_range(0..@max_size) if @max_size
       Signature.new(as: "file", id: id, url: signature.url.to_s, fields: signature.fields)
+    end
+
+    def s3_presigned_post_options(options)
+      @s3_presigned_post_options.merge(options)
+    end
+
+    def s3_object_operation_options(options)
+      @s3_object_operation_options.merge(options)
+    end
+
+    def upload_via_copy_operation?(uploadable)
+      uploadable.is_a?(Refile::File) and uploadable.backend.is_a?(S3) and uploadable.backend.access_key_id == access_key_id
     end
 
     verify_id def object(id)
