@@ -19,32 +19,85 @@ RSpec.describe Refile::S3 do
         expect(value[attribute]).to eq(config[attribute])
       end
     end
-  end
 
-  %i(s3_object_operation_options s3_presigned_post_options).each do |option|
-    describe "@#{option}" do
-      let(:additional_config) do
-        { "#{option}".to_sym => { server_side_encryption: 'aes256' } }
-      end
-
-      let(:config) { additional_config.merge s3_config }
-      let(:value) { backend.send(:instance_variable_get, "@#{option}") }
+    context 'given additional configuration options' do
+      let(:config) { { server_side_encryption: 'aes256' }.merge s3_config }
 
       it 'is initialized' do
         expect(value[:server_side_encryption]).to eq('aes256')
-        expect(backend.instance_variable_get(:@s3_options)).not_to have_key(option)
+      end
+    end
+  end
+
+  describe '.s3_options_for' do
+    let(:config) do
+      {
+        access_key_id: 'xyz',
+        secret_access_key: 'abcd1234',
+        region: 'sa-east-1',
+        bucket: 'my-bucket',
+        server_side_encryption: 'aes256'
+      }
+    end
+    let(:options) { {} }
+    let(:value) { backend.s3_options_for key, options }
+
+    describe 'given operation' do
+      context 'client' do
+        let(:key) { :client }
+
+        it 'returns valid options' do
+          expect(value).to eq(
+            access_key_id: 'xyz',
+            secret_access_key: 'abcd1234',
+            region: 'sa-east-1'
+          )
+        end
+      end
+
+      context 'copy_from' do
+        let(:key) { :copy_from }
+        let(:options) { { copy_source: 'xyz' } }
+
+        it 'returns valid options' do
+          expect(value).to eq(
+            copy_source: 'xyz',
+            server_side_encryption: 'aes256'
+          )
+        end
+      end
+
+      context 'presigned_post' do
+        let(:key) { :presigned_post }
+        let(:options) { { key: 'xyz' } }
+
+        it 'returns valid options' do
+          expect(value).to eq(
+            key: 'xyz',
+            server_side_encryption: 'aes256'
+          )
+        end
+      end
+
+      context 'put' do
+        let(:key) { :put }
+        let(:options) { { body: 'xyz', content_length: 3 } }
+
+        it 'returns valid options' do
+          expect(value).to eq(
+            body: 'xyz',
+            content_length: 3,
+            server_side_encryption: 'aes256'
+          )
+        end
       end
     end
 
-    describe ".#{option}" do
-      let(:additional_config) do
-        { "#{option}".to_sym => { server_side_encryption: 'aes256' } }
-      end
+    context 'given an invalid operation' do
+      let(:key) { :invalid }
 
-      let(:config) { additional_config.merge s3_config }
-
-      it 'is merges provided options' do
-        expect(backend.send(option, { server_side_encryption: 'aws:kms' })[:server_side_encryption]).to eq('aws:kms')
+      it 'raises an error' do
+        expect { value }.to raise_error(KeyError)
       end
     end
   end

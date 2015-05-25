@@ -21,6 +21,13 @@ module Refile
 
     attr_reader :access_key_id, :max_size
 
+    S3_AVAILABLE_OPTIONS = {
+      client: %i(access_key_id region secret_access_key),
+      copy_from: %i(copy_source server_side_encryption),
+      presigned_post: %i(key server_side_encryption),
+      put: %i(body content_length server_side_encryption)
+    }
+
     # Sets up an S3 backend with the given credentials.
     #
     # @param [String] access_key_id
@@ -36,10 +43,8 @@ module Refile
     def initialize(access_key_id:, secret_access_key:, region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
       @access_key_id = access_key_id
       @secret_access_key = secret_access_key
-      @s3_presigned_post_options = s3_options.delete(:s3_presigned_post_options) { {} }
-      @s3_object_operation_options = s3_options.delete(:s3_object_operation_options) { {} }
       @s3_options = { access_key_id: access_key_id, secret_access_key: secret_access_key, region: region }.merge s3_options
-      @s3 = Aws::S3::Resource.new @s3_options
+      @s3 = Aws::S3::Resource.new s3_options_for(:client)
       @bucket_name = bucket
       @bucket = @s3.bucket @bucket_name
       @hasher = hasher
@@ -60,7 +65,7 @@ module Refile
         [:put, { body: uploadable, content_length: uploadable.size }]
       end
 
-      object(id).send(operation, s3_object_operation_options(options))
+      object(id).send(operation, s3_options_for(operation, options))
 
       Refile::File.new(self, id)
     end
@@ -141,17 +146,14 @@ module Refile
     # @return [Refile::Signature]
     def presign
       id = RandomHasher.new.hash
-      signature = @bucket.presigned_post(s3_presigned_post_options(key: [*@prefix, id].join("/")))
+      signature = @bucket.presigned_post(s3_options_for(:presigned_post, key: [*@prefix, id].join("/")))
       signature.content_length_range(0..@max_size) if @max_size
       Signature.new(as: "file", id: id, url: signature.url.to_s, fields: signature.fields)
     end
 
-    def s3_presigned_post_options(options)
-      @s3_presigned_post_options.merge(options)
-    end
-
-    def s3_object_operation_options(options)
-      @s3_object_operation_options.merge(options)
+    def s3_options_for(operation, options = {})
+      keys = S3_AVAILABLE_OPTIONS.fetch(operation)
+      @s3_options.merge(options).select { |key, _| keys.include?(key) }
     end
 
     def upload_via_copy_operation?(uploadable)
