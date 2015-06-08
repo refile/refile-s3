@@ -36,7 +36,8 @@ RSpec.describe Refile::S3 do
         secret_access_key: 'abcd1234',
         region: 'sa-east-1',
         bucket: 'my-bucket',
-        server_side_encryption: 'aes256'
+        server_side_encryption: 'aes256',
+        storage_class: 'STANDARD'
       }
     end
     let(:options) { {} }
@@ -62,7 +63,8 @@ RSpec.describe Refile::S3 do
         it 'returns valid options' do
           expect(value).to eq(
             copy_source: 'xyz',
-            server_side_encryption: 'aes256'
+            server_side_encryption: 'aes256',
+            storage_class: 'STANDARD'
           )
         end
       end
@@ -74,7 +76,8 @@ RSpec.describe Refile::S3 do
         it 'returns valid options' do
           expect(value).to eq(
             key: 'xyz',
-            server_side_encryption: 'aes256'
+            server_side_encryption: 'aes256',
+            storage_class: 'STANDARD'
           )
         end
       end
@@ -87,7 +90,8 @@ RSpec.describe Refile::S3 do
           expect(value).to eq(
             body: 'xyz',
             content_length: 3,
-            server_side_encryption: 'aes256'
+            server_side_encryption: 'aes256',
+            storage_class: 'STANDARD'
           )
         end
       end

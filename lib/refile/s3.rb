@@ -32,9 +32,9 @@ module Refile
 
     S3_AVAILABLE_OPTIONS = {
       client: %i(access_key_id region secret_access_key),
-      copy_from: %i(copy_source server_side_encryption),
-      presigned_post: %i(key server_side_encryption),
-      put: %i(body content_length server_side_encryption)
+      copy_from: %i(copy_source server_side_encryption storage_class),
+      presigned_post: %i(key server_side_encryption storage_class),
+      put: %i(body content_length server_side_encryption storage_class)
     }
 
     # Sets up an S3 backend
