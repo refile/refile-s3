@@ -4,12 +4,21 @@ require "refile"
 require "refile/s3/version"
 
 module Refile
+
+  # @api private
+  class S3BackendError < StandardError; end
+
+  # @api private
+  class S3CredentialsError < S3BackendError
+    def message
+      "Credentials not found"
+    end
+  end
+
   # A refile backend which stores files in Amazon S3
   #
   # @example
   #   backend = Refile::Backend::S3.new(
-  #     access_key_id: "xyz",
-  #     secret_access_key: "abcd1234",
   #     region: "sa-east-1",
   #     bucket: "my-bucket",
   #     prefix: "files"
@@ -28,10 +37,8 @@ module Refile
       put: %i(body content_length server_side_encryption)
     }
 
-    # Sets up an S3 backend with the given credentials.
+    # Sets up an S3 backend
     #
-    # @param [String] access_key_id
-    # @param [String] secret_access_key
     # @param [String] region            The AWS region to connect to
     # @param [String] bucket            The name of the bucket where files will be stored
     # @param [String] prefix            A prefix to add to all files. Prefixes on S3 are kind of like folders.
@@ -40,11 +47,12 @@ module Refile
     # @param [Hash] s3_options          Additional options to initialize S3 with
     # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/Core/Configuration.html
     # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/S3.html
-    def initialize(access_key_id:, secret_access_key:, region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
-      @access_key_id = access_key_id
-      @secret_access_key = secret_access_key
-      @s3_options = { access_key_id: access_key_id, secret_access_key: secret_access_key, region: region }.merge s3_options
+    def initialize(region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
+      @s3_options = { region: region }.merge s3_options
       @s3 = Aws::S3::Resource.new s3_options_for(:client)
+      credentials = @s3.client.config.credentials
+      raise S3CredentialsError unless credentials
+      @access_key_id = credentials.access_key_id
       @bucket_name = bucket
       @bucket = @s3.bucket @bucket_name
       @hasher = hasher
