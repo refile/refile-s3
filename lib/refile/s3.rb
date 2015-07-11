@@ -75,7 +75,7 @@ module Refile
     # if a file with the given id does not exist in this backend. Use
     # {FileSystem#exists?} to check if the file actually exists.
     #
-    # @param [Sring] id           The id of the file
+    # @param [String] id           The id of the file
     # @return [Refile::File]      The retrieved file
     verify_id def get(id)
       Refile::File.new(self, id)
@@ -83,7 +83,7 @@ module Refile
 
     # Delete a file from this backend
     #
-    # @param [Sring] id           The id of the file
+    # @param [String] id           The id of the file
     # @return [void]
     verify_id def delete(id)
       object(id).delete
@@ -92,7 +92,7 @@ module Refile
     # Return an IO object for the uploaded file which can be used to read its
     # content.
     #
-    # @param [Sring] id           The id of the file
+    # @param [String] id           The id of the file
     # @return [IO]                An IO object containing the file contents
     verify_id def open(id)
       Kernel.open(object(id).presigned_url(:get))
@@ -110,7 +110,7 @@ module Refile
 
     # Return the size in bytes of the uploaded file.
     #
-    # @param [Sring] id           The id of the file
+    # @param [String] id           The id of the file
     # @return [Integer]           The file's size
     verify_id def size(id)
       object(id).get.content_length
@@ -120,7 +120,7 @@ module Refile
 
     # Return whether the file with the given id exists in this backend.
     #
-    # @param [Sring] id           The id of the file
+    # @param [String] id           The id of the file
     # @return [Boolean]
     verify_id def exists?(id)
       object(id).exists?
