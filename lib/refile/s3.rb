@@ -95,7 +95,7 @@ module Refile
     # @param [String] id           The id of the file
     # @return [IO]                An IO object containing the file contents
     verify_id def open(id)
-      Kernel.open(object(id).presigned_url(:get))
+      Kernel.open(object(id).presigned_url(:get, secure: secure_endpoint))
     end
 
     # Return the entire contents of the uploaded file as a String.
@@ -137,6 +137,10 @@ module Refile
     def clear!(confirm = nil)
       raise Refile::Confirm unless confirm == :confirm
       @bucket.objects(prefix: @prefix).delete
+    end
+
+    def secure_endpoint
+      @s3_options.fetch(:endpoint, "").starts_with? "https"
     end
 
     # Return a presign signature which can be used to upload a file into this
