@@ -15,6 +15,10 @@ module Refile
     end
   end
 
+  # @api private
+  class S3MissingCredentialsError < S3BackendError
+  end
+
   # A refile backend which stores files in Amazon S3
   #
   # @example
@@ -41,6 +45,22 @@ module Refile
     # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/Core/Configuration.html
     # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/S3.html
     def initialize(region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
+      if s3_options[:access_key_id].nil? || s3_options[:access_key_id].empty?
+        raise S3MissingCredentialsError, "Missing access_key_id, got #{s3_options[:access_key_id].inspect}"
+      end
+
+      if s3_options[:secret_access_key].nil? || s3_options[:secret_access_key].empty?
+        raise S3MissingCredentialsError, "Missing secret_access_key, got #{s3_options[:secret_access_key].inspect}"
+      end
+
+      if region.nil? || region.empty?
+        raise S3MissingCredentialsError, "Missing region argument, got #{region.inspect}"
+      end
+
+      if bucket.nil? || bucket.empty?
+        raise S3MissingCredentialsError, "Missing bucket argument, got #{bucket.inspect}"
+      end
+
       @s3_options = { region: region }.merge s3_options
       @s3 = Aws::S3::Resource.new @s3_options
       credentials = @s3.client.config.credentials
