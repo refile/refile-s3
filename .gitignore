@@ -13,3 +13,5 @@
 *.a
 mkmf.log
 s3.yml
+.ruby-version
+.ruby-gemset
