@@ -136,7 +136,7 @@ module Refile
     # @return [void]
     def clear!(confirm = nil)
       raise Refile::Confirm unless confirm == :confirm
-      @bucket.objects(prefix: @prefix).delete
+      @bucket.objects(prefix: @prefix).batch_delete!
     end
 
     # Return a presign signature which can be used to upload a file into this
