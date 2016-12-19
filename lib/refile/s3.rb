@@ -153,7 +153,7 @@ module Refile
 
     def open_options
       http_proxy_option = @s3_options["http_proxy"] || @s3_options[:http_proxy]
-      if http_proxy_option
+      unless http_proxy_option.to_s.empty?
         proxy_uri     = URI.parse(http_proxy_option)
         proxy_options = ["#{proxy_uri.scheme}://#{proxy_uri.host}:#{proxy_uri.port}"]
         proxy_options.concat([proxy_uri.user, proxy_uri.password]) if proxy_uri.user
