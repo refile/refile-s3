@@ -1,4 +1,4 @@
-require "aws-sdk"
+require "aws-sdk-s3"
 require "open-uri"
 require "refile"
 require "refile/s3/version"
