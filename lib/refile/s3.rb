@@ -86,7 +86,7 @@ module Refile
     # @param [String] id           The id of the file
     # @return [void]
     verify_id def delete(id)
-      object(id).delete
+      # object(id).delete
     end
 
     # Return an IO object for the uploaded file which can be used to read its
