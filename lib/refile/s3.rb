@@ -43,7 +43,7 @@ module Refile
     def initialize(region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
       @s3_options = { region: region }.merge s3_options
       @s3 = Aws::S3::Resource.new @s3_options
-      credentials = @s3.client.config.credentials
+      credentials = @s3.client.config.credentials.credentials
       raise S3CredentialsError unless credentials
       @access_key_id = credentials.access_key_id
       @bucket_name = bucket
