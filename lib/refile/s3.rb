@@ -30,6 +30,13 @@ module Refile
 
     attr_reader :access_key_id, :max_size
 
+    S3_AVAILABLE_OPTIONS = {
+      client: %i(access_key_id region secret_access_key),
+      copy_from: %i(copy_source server_side_encryption storage_class),
+      presigned_post: %i(key server_side_encryption storage_class),
+      put: %i(body content_length server_side_encryption storage_class)
+    }
+
     # Sets up an S3 backend
     #
     # @param [String] region            The AWS region to connect to
@@ -42,7 +49,7 @@ module Refile
     # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/S3.html
     def initialize(region:, bucket:, max_size: nil, prefix: nil, hasher: Refile::RandomHasher.new, **s3_options)
       @s3_options = { region: region }.merge s3_options
-      @s3 = Aws::S3::Resource.new @s3_options
+      @s3 = Aws::S3::Resource.new s3_options_for(:client)
       credentials = @s3.client.config.credentials
       raise S3CredentialsError unless credentials
       @access_key_id = credentials.access_key_id
@@ -60,11 +67,13 @@ module Refile
     verify_uploadable def upload(uploadable)
       id = @hasher.hash(uploadable)
 
-      if uploadable.is_a?(Refile::File) and uploadable.backend.is_a?(S3) and uploadable.backend.access_key_id == access_key_id
-        object(id).copy_from(copy_source: [@bucket_name, uploadable.backend.object(uploadable.id).key].join("/"))
+      operation, options = if upload_via_copy_operation?(uploadable)
+        [:copy_from, { copy_source: [@bucket_name, uploadable.backend.object(uploadable.id).key].join("/") }]
       else
-        object(id).put(body: uploadable, content_length: uploadable.size)
+        [:put, { body: uploadable, content_length: uploadable.size }]
       end
+
+      object(id).send(operation, s3_options_for(operation, options))
 
       Refile::File.new(self, id)
     end
@@ -145,9 +154,18 @@ module Refile
     # @return [Refile::Signature]
     def presign
       id = RandomHasher.new.hash
-      signature = @bucket.presigned_post(key: [*@prefix, id].join("/"))
+      signature = @bucket.presigned_post(s3_options_for(:presigned_post, key: [*@prefix, id].join("/")))
       signature.content_length_range(0..@max_size) if @max_size
       Signature.new(as: "file", id: id, url: signature.url.to_s, fields: signature.fields)
+    end
+
+    def s3_options_for(operation, options = {})
+      keys = S3_AVAILABLE_OPTIONS.fetch(operation)
+      @s3_options.merge(options).select { |key, _| keys.include?(key) }
+    end
+
+    def upload_via_copy_operation?(uploadable)
+      uploadable.is_a?(Refile::File) and uploadable.backend.is_a?(S3) and uploadable.backend.access_key_id == access_key_id
     end
 
     verify_id def object(id)
