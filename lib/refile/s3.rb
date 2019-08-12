@@ -95,7 +95,8 @@ module Refile
     # @param [String] id           The id of the file
     # @return [IO]                An IO object containing the file contents
     verify_id def open(id)
-      Kernel.open(object(id).presigned_url(:get))
+      url = object(id).presigned_url(:get)
+      Kernel.open(url, open_options)
     end
 
     # Return the entire contents of the uploaded file as a String.
@@ -148,6 +149,18 @@ module Refile
       signature = @bucket.presigned_post(key: [*@prefix, id].join("/"))
       signature.content_length_range(0..@max_size) if @max_size
       Signature.new(as: "file", id: id, url: signature.url.to_s, fields: signature.fields)
+    end
+
+    def open_options
+      http_proxy_option = @s3_options["http_proxy"] || @s3_options[:http_proxy]
+      unless http_proxy_option.to_s.empty?
+        proxy_uri     = URI.parse(http_proxy_option)
+        proxy_options = ["#{proxy_uri.scheme}://#{proxy_uri.host}:#{proxy_uri.port}"]
+        proxy_options.concat([proxy_uri.user, proxy_uri.password]) if proxy_uri.user
+        {proxy_http_basic_authentication: proxy_options}
+      else
+        {}
+      end
     end
 
     verify_id def object(id)
