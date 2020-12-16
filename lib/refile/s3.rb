@@ -28,7 +28,7 @@ module Refile
   class S3
     extend Refile::BackendMacros
 
-    attr_reader :access_key_id, :max_size
+    attr_reader, :max_size
 
     # Sets up an S3 backend
     #
@@ -45,7 +45,6 @@ module Refile
       @s3 = Aws::S3::Resource.new @s3_options
       credentials = @s3.client.config.credentials
       raise S3CredentialsError unless credentials
-      @access_key_id = credentials.access_key_id
       @bucket_name = bucket
       @bucket = @s3.bucket @bucket_name
       @hasher = hasher
@@ -60,7 +59,7 @@ module Refile
     verify_uploadable def upload(uploadable)
       id = @hasher.hash(uploadable)
 
-      if uploadable.is_a?(Refile::File) and uploadable.backend.is_a?(S3) and uploadable.backend.access_key_id == access_key_id
+      if uploadable.is_a?(Refile::File) and uploadable.backend.is_a?(S3)
         object(id).copy_from(copy_source: [@bucket_name, uploadable.backend.object(uploadable.id).key].join("/"))
       else
         object(id).put(body: uploadable, content_length: uploadable.size)
