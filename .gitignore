@@ -13,3 +13,4 @@
 *.a
 mkmf.log
 s3.yml
+.idea
