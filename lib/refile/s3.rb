@@ -45,7 +45,7 @@ module Refile
       @s3 = Aws::S3::Resource.new @s3_options
       credentials = @s3.client.config.credentials
       raise S3CredentialsError unless credentials
-      @access_key_id = credentials.access_key_id
+      @access_key_id = credentials.access_key_id rescue nil
       @bucket_name = bucket
       @bucket = @s3.bucket @bucket_name
       @hasher = hasher
